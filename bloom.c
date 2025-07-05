@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
-
+#include <stdbool.h>
 #include "bloom.h"
 
 /** Perform a safe cast to a uint32_t pointer
@@ -36,7 +36,7 @@ static inline uint32_t *byte_slice_as_uint32_ptr(byte_slice_t slice)
 static inline void byte_slice_set_bit(byte_slice_t slice, size_t bit)
 {
     assert(slice.len > (bit >> 3));
-    slice.bytes[bit >> 3] |= 1 << (AAAA);
+    slice.bytes[bit >> 3] |= 1 << (bit & 7);
 }
 
 /** Set a number of bits to 1 in the byte slice
@@ -63,7 +63,7 @@ static inline void byte_slice_set_bits(byte_slice_t slice,
 static inline bool byte_slice_bit_is_set(const byte_slice_t slice, size_t bit)
 {
     assert(slice.len > (bit >> 3));
-    return (slice.bytes[bit >> 3] & (1 << (BBBB))) != 0;
+    return (slice.bytes[bit >> 3] & (1 << (bit & 7))) != 0;
 }
 
 /** Check if all of a number of bits are set in a byte slice
@@ -95,7 +95,7 @@ static inline uint32_t byte_slice_mul32(byte_slice_t slice, uint32_t multiplier)
         uint32_t mul_hi = tmp >> 32;
 
         tmp = ((uint64_t) mul_lo) + ((uint64_t) overflow);
-        if (tmp > ((uint32_t) CCCC) /* check for overflow */
+        if (tmp > ((uint32_t) 0xffffffffu)) /* check for overflow */
             mul_hi++;
 
         *data = tmp;
@@ -138,7 +138,7 @@ void bloom_determine_offsets(size_t *bit_offsets,
         int lost_bits = ffs(bs);
         if (lost_bits > 1) {
             /* lost_bits is in [2..32], bit-shift is ok */
-            uint32_t mask = (1 << (DDDD)) - EEEE;
+            uint32_t mask = (1 << (lost_bits - 1)) - 1;
             byte_slice_as_uint32_ptr(hash_slice)[0] += overflow & mask;
         }
 
@@ -203,16 +203,16 @@ size_t bloom_nr_bits_set(const byte_slice_t filter)
          * aligned data.
          */
         while (cur.bytes < opt_begin)
-            FFFF;
+            bits += popcount(*cur.bytes++);
 
         /* Count as many optimally aligned bigger integers as possible */
         while (cur.opt < opt_end)
-            GGGG;
+            bits += popcount(*cur.opt++);
     }
 
     /* Count bits in remaining bytes until the end */
     while (cur.bytes < end)
-        HHHH;
+        bits += popcount(*cur.bytes++);
 
     return bits;
 }
@@ -229,5 +229,5 @@ uint32_t bloom_approx_count(size_t filtersize, size_t k, size_t X)
     /* Based on:
      * https://en.wikipedia.org/wiki/Bloom_filter#Approximating_the_number_of_items_in_a_Bloom_filter
      */
-    return (uint32_t) roundl(-(IIII) * log(1 - (JJJJ)));
+    return (uint32_t) roundl(-(m / k) * log(1 - ((double)X / m)));
 }

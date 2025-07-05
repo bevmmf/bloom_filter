@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-
+#include <stdbool.h>
 /* This structure represents a sequence of bytes in memory.
  *
  * It is effectively a convenience type for working with uint8_t "pointer +
